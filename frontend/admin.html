@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExamAI — Admin Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="dashboard">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>Exam<span class="accent">AI</span></h1>
+                <span class="role-badge role-admin">Admin</span>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-item active" data-page="dashboard"><span
+                        class="nav-icon">📊</span><span>Dashboard</span></div>
+                <div class="nav-item" data-page="teachers"><span class="nav-icon">👨‍🏫</span><span>Teachers</span>
+                </div>
+                <div class="nav-item" data-page="students"><span class="nav-icon">🎓</span><span>Students</span></div>
+                <div class="nav-item" data-page="classes"><span class="nav-icon">🏫</span><span>Classes</span></div>
+                <div class="nav-item" data-page="subjects"><span class="nav-icon">📚</span><span>Subjects</span></div>
+                <div class="nav-item" data-page="mappings"><span class="nav-icon">🔗</span><span>Mappings</span></div>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">A</div>
+                    <div>
+                        <div class="user-name" id="userName">Admin</div>
+                        <div class="user-email" id="userEmail">admin@examai.com</div>
+                    </div>
+                </div>
+                <button class="logout-btn" onclick="Auth.logout()">🚪 Sign Out</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Dashboard Page -->
+            <div id="page-dashboard" class="page">
+                <div class="page-header">
+                    <h2>Admin Dashboard</h2>
+                    <p>Overview of your institution</p>
+                </div>
+                <div class="stats-grid" id="statsGrid"></div>
+            </div>
+
+            <!-- Teachers Page -->
+            <div id="page-teachers" class="page" style="display:none;">
+                <div class="page-header">
+                    <h2>Teachers</h2>
+                    <p>Manage teacher accounts</p>
+                </div>
+                <div class="content-card">
+                    <div class="content-card-header">
+                        <h3>All Teachers</h3>
+                        <button class="btn-primary btn-sm" onclick="showModal('teacherModal')">+ Add Teacher</button>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="teachersList"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Students Page -->
+            <div id="page-students" class="page" style="display:none;">
+                <div class="page-header">
+                    <h2>Students</h2>
+                    <p>Manage student accounts</p>
+                </div>
+                <div class="content-card">
+                    <div class="content-card-header">
+                        <h3>All Students</h3>
+                        <button class="btn-primary btn-sm" onclick="showModal('studentModal')">+ Add Student</button>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentsList"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Classes Page -->
+            <div id="page-classes" class="page" style="display:none;">
+                <div class="page-header">
+                    <h2>Classes</h2>
+                    <p>Manage classes and sections</p>
+                </div>
+                <div class="content-card">
+                    <div class="content-card-header">
+                        <h3>All Classes</h3>
+                        <button class="btn-primary btn-sm" onclick="showModal('classModal')">+ Add Class</button>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Section</th>
+                                <th>Year</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="classesList"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Subjects Page -->
+            <div id="page-subjects" class="page" style="display:none;">
+                <div class="page-header">
+                    <h2>Subjects</h2>
+                    <p>Manage subject catalog</p>
+                </div>
+                <div class="content-card">
+                    <div class="content-card-header">
+                        <h3>All Subjects</h3>
+                        <button class="btn-primary btn-sm" onclick="showModal('subjectModal')">+ Add Subject</button>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Code</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="subjectsList"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Mappings Page -->
+            <div id="page-mappings" class="page" style="display:none;">
+                <div class="page-header">
+                    <h2>Mappings</h2>
+                    <p>Assign teachers to subjects and students to classes</p>
+                </div>
+
+                <div class="content-card">
+                    <div class="content-card-header">
+                        <h3>Class → Subject → Teacher</h3>
+                        <button class="btn-primary btn-sm" onclick="showModal('cstModal')">+ Assign Teacher</button>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Class</th>
+                                <th>Subject</th>
+                                <th>Teacher</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cstList"></tbody>
+                    </table>
+                </div>
+
+                <div class="content-card">
+                    <div class="content-card-header">
+                        <h3>Student → Class</h3>
+                        <button class="btn-primary btn-sm" onclick="showModal('scModal')">+ Add Student to
+                            Class</button>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Class</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scList"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal-overlay" id="teacherModal">
+        <div class="modal">
+            <h3>Add Teacher</h3>
+            <div class="form-group"><label>Full Name</label><input id="tName" placeholder="Dr. Smith"></div>
+            <div class="form-group"><label>Email</label><input id="tEmail" type="email" placeholder="smith@school.edu">
+            </div>
+            <div class="form-group"><label>Password</label><input id="tPass" type="password"
+                    placeholder="Temporary password"></div>
+            <div class="modal-actions"><button class="btn-secondary"
+                    onclick="hideModal('teacherModal')">Cancel</button><button class="btn-primary btn-sm"
+                    onclick="createTeacher()">Create</button></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="studentModal">
+        <div class="modal">
+            <h3>Add Student</h3>
+            <div class="form-group"><label>Full Name</label><input id="sName" placeholder="Jane Doe"></div>
+            <div class="form-group"><label>Email</label><input id="sEmail" type="email" placeholder="jane@school.edu">
+            </div>
+            <div class="form-group"><label>Password</label><input id="sPass" type="password"
+                    placeholder="Temporary password"></div>
+            <div class="modal-actions"><button class="btn-secondary"
+                    onclick="hideModal('studentModal')">Cancel</button><button class="btn-primary btn-sm"
+                    onclick="createStudent()">Create</button></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="classModal">
+        <div class="modal">
+            <h3>Add Class</h3>
+            <div class="form-group"><label>Class Name</label><input id="cName" placeholder="10th Grade"></div>
+            <div class="form-group"><label>Section</label><input id="cSection" placeholder="A"></div>
+            <div class="form-group"><label>Academic Year</label><input id="cYear" value="2025-26"></div>
+            <div class="modal-actions"><button class="btn-secondary"
+                    onclick="hideModal('classModal')">Cancel</button><button class="btn-primary btn-sm"
+                    onclick="createClass()">Create</button></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="subjectModal">
+        <div class="modal">
+            <h3>Add Subject</h3>
+            <div class="form-group"><label>Subject Name</label><input id="subName" placeholder="Mathematics"></div>
+            <div class="form-group"><label>Subject Code</label><input id="subCode" placeholder="MATH101"></div>
+            <div class="modal-actions"><button class="btn-secondary"
+                    onclick="hideModal('subjectModal')">Cancel</button><button class="btn-primary btn-sm"
+                    onclick="createSubject()">Create</button></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="cstModal">
+        <div class="modal">
+            <h3>Assign Teacher to Class-Subject</h3>
+            <div class="form-group"><label>Class</label><select id="cstClass"></select></div>
+            <div class="form-group"><label>Subject</label><select id="cstSubject"></select></div>
+            <div class="form-group"><label>Teacher</label><select id="cstTeacher"></select></div>
+            <div class="modal-actions"><button class="btn-secondary"
+                    onclick="hideModal('cstModal')">Cancel</button><button class="btn-primary btn-sm"
+                    onclick="createCST()">Assign</button></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="scModal">
+        <div class="modal">
+            <h3>Add Student to Class</h3>
+            <div class="form-group"><label>Student</label><select id="scStudent"></select></div>
+            <div class="form-group"><label>Class</label><select id="scClass"></select></div>
+            <div class="modal-actions"><button class="btn-secondary"
+                    onclick="hideModal('scModal')">Cancel</button><button class="btn-primary btn-sm"
+                    onclick="createSC()">Add</button></div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        if (!Auth.requireAuth(['admin'])) throw 'unauthorized';
+
+        const user = Auth.getUser();
+        document.getElementById('userName').textContent = user.full_name;
+        document.getElementById('userEmail').textContent = user.email;
+        document.getElementById('userAvatar').textContent = user.full_name.charAt(0);
+
+        // ── Navigation ──
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+                item.classList.add('active');
+                document.getElementById('page-' + item.dataset.page).style.display = 'block';
+                loadPage(item.dataset.page);
+            });
+        });
+
+        // ── Data loading ──
+        let allClasses = [], allSubjects = [], allTeachers = [], allStudents = [];
+
+        async function loadPage(page) {
+            switch (page) {
+                case 'dashboard': loadStats(); break;
+                case 'teachers': loadTeachers(); break;
+                case 'students': loadStudents(); break;
+                case 'classes': loadClasses(); break;
+                case 'subjects': loadSubjects(); break;
+                case 'mappings': loadMappings(); break;
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const stats = await Api.get('/api/admin/stats');
+                document.getElementById('statsGrid').innerHTML = `
+            <div class="stat-card"><div class="stat-icon">👨‍🏫</div><div class="stat-value">${stats.total_teachers}</div><div class="stat-label">Teachers</div></div>
+            <div class="stat-card"><div class="stat-icon">🎓</div><div class="stat-value">${stats.total_students}</div><div class="stat-label">Students</div></div>
+            <div class="stat-card"><div class="stat-icon">🏫</div><div class="stat-value">${stats.total_classes}</div><div class="stat-label">Classes</div></div>
+            <div class="stat-card"><div class="stat-icon">📚</div><div class="stat-value">${stats.total_subjects}</div><div class="stat-label">Subjects</div></div>
+            <div class="stat-card"><div class="stat-icon">📝</div><div class="stat-value">${stats.total_tests}</div><div class="stat-label">Tests</div></div>
+        `;
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function loadTeachers() {
+            try {
+                allTeachers = await Api.get('/api/admin/users?role=teacher');
+                const tbody = document.getElementById('teachersList');
+                tbody.innerHTML = allTeachers.length === 0 ? '<tr><td colspan="5" class="empty-state">No teachers yet</td></tr>' :
+                    allTeachers.map(u => `<tr>
+                <td><strong>${u.full_name}</strong></td><td>${u.email}</td>
+                <td><span class="status ${u.is_active ? 'status-active' : 'status-error'}">${u.is_active ? 'Active' : 'Inactive'}</span></td>
+                <td>${new Date(u.created_at).toLocaleDateString()}</td>
+                <td><button class="btn-icon" title="Reset Password" onclick="resetPassword(${u.id})">🔑</button>
+                    <button class="btn-icon" title="Deactivate" onclick="deactivateUser(${u.id})">🚫</button></td>
+            </tr>`).join('');
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function loadStudents() {
+            try {
+                allStudents = await Api.get('/api/admin/users?role=student');
+                const tbody = document.getElementById('studentsList');
+                tbody.innerHTML = allStudents.length === 0 ? '<tr><td colspan="5" class="empty-state">No students yet</td></tr>' :
+                    allStudents.map(u => `<tr>
+                <td><strong>${u.full_name}</strong></td><td>${u.email}</td>
+                <td><span class="status ${u.is_active ? 'status-active' : 'status-error'}">${u.is_active ? 'Active' : 'Inactive'}</span></td>
+                <td>${new Date(u.created_at).toLocaleDateString()}</td>
+                <td><button class="btn-icon" title="Reset Password" onclick="resetPassword(${u.id})">🔑</button>
+                    <button class="btn-icon" title="Deactivate" onclick="deactivateUser(${u.id})">🚫</button></td>
+            </tr>`).join('');
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function loadClasses() {
+            try {
+                allClasses = await Api.get('/api/admin/classes');
+                const tbody = document.getElementById('classesList');
+                tbody.innerHTML = allClasses.length === 0 ? '<tr><td colspan="4" class="empty-state">No classes yet</td></tr>' :
+                    allClasses.map(c => `<tr>
+                <td><strong>${c.name}</strong></td><td>${c.section || '-'}</td><td>${c.academic_year}</td>
+                <td><button class="btn-icon" title="Delete" onclick="deleteClass(${c.id})">🗑️</button></td>
+            </tr>`).join('');
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function loadSubjects() {
+            try {
+                allSubjects = await Api.get('/api/admin/subjects');
+                const tbody = document.getElementById('subjectsList');
+                tbody.innerHTML = allSubjects.length === 0 ? '<tr><td colspan="3" class="empty-state">No subjects yet</td></tr>' :
+                    allSubjects.map(s => `<tr>
+                <td><strong>${s.name}</strong></td><td>${s.code}</td>
+                <td><button class="btn-icon" title="Delete" onclick="deleteSubject(${s.id})">🗑️</button></td>
+            </tr>`).join('');
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function loadMappings() {
+            try {
+                // Load dropdown data
+                allClasses = await Api.get('/api/admin/classes');
+                allSubjects = await Api.get('/api/admin/subjects');
+                allTeachers = await Api.get('/api/admin/users?role=teacher');
+                allStudents = await Api.get('/api/admin/users?role=student');
+
+                // Populate dropdowns
+                document.getElementById('cstClass').innerHTML = allClasses.map(c => `<option value="${c.id}">${c.name} ${c.section}</option>`).join('');
+                document.getElementById('cstSubject').innerHTML = allSubjects.map(s => `<option value="${s.id}">${s.name} (${s.code})</option>`).join('');
+                document.getElementById('cstTeacher').innerHTML = allTeachers.map(t => `<option value="${t.id}">${t.full_name}</option>`).join('');
+                document.getElementById('scStudent').innerHTML = allStudents.map(s => `<option value="${s.id}">${s.full_name}</option>`).join('');
+                document.getElementById('scClass').innerHTML = allClasses.map(c => `<option value="${c.id}">${c.name} ${c.section}</option>`).join('');
+
+                // Load CST mappings
+                const cstMappings = await Api.get('/api/admin/mappings/class-subject');
+                document.getElementById('cstList').innerHTML = cstMappings.length === 0 ? '<tr><td colspan="4" class="empty-state">No mappings yet</td></tr>' :
+                    cstMappings.map(m => `<tr>
+                <td>${m.class_name || ''}</td><td>${m.subject_name || ''}</td><td>${m.teacher_name || ''}</td>
+                <td><button class="btn-icon" onclick="deleteCST(${m.id})">🗑️</button></td>
+            </tr>`).join('');
+
+                // Load SC mappings
+                const scMappings = await Api.get('/api/admin/mappings/student-class');
+                document.getElementById('scList').innerHTML = scMappings.length === 0 ? '<tr><td colspan="3" class="empty-state">No mappings yet</td></tr>' :
+                    scMappings.map(m => `<tr>
+                <td>${m.student_name || ''}</td><td>${m.class_name || ''}</td>
+                <td><button class="btn-icon" onclick="deleteSC(${m.id})">🗑️</button></td>
+            </tr>`).join('');
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        // ── CRUD Actions ──
+        async function createTeacher() {
+            try {
+                await Api.post('/api/admin/users', { full_name: g('tName'), email: g('tEmail'), password: g('tPass'), role: 'teacher' });
+                hideModal('teacherModal'); toast('Teacher created!', 'success'); loadTeachers();
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function createStudent() {
+            try {
+                await Api.post('/api/admin/users', { full_name: g('sName'), email: g('sEmail'), password: g('sPass'), role: 'student' });
+                hideModal('studentModal'); toast('Student created!', 'success'); loadStudents();
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function createClass() {
+            try {
+                await Api.post('/api/admin/classes', { name: g('cName'), section: g('cSection'), academic_year: g('cYear') });
+                hideModal('classModal'); toast('Class created!', 'success'); loadClasses();
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function createSubject() {
+            try {
+                await Api.post('/api/admin/subjects', { name: g('subName'), code: g('subCode') });
+                hideModal('subjectModal'); toast('Subject created!', 'success'); loadSubjects();
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function createCST() {
+            try {
+                await Api.post('/api/admin/mappings/class-subject', {
+                    class_id: +document.getElementById('cstClass').value,
+                    subject_id: +document.getElementById('cstSubject').value,
+                    teacher_id: +document.getElementById('cstTeacher').value,
+                });
+                hideModal('cstModal'); toast('Teacher assigned!', 'success'); loadMappings();
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function createSC() {
+            try {
+                await Api.post('/api/admin/mappings/student-class', {
+                    student_id: +document.getElementById('scStudent').value,
+                    class_id: +document.getElementById('scClass').value,
+                });
+                hideModal('scModal'); toast('Student added to class!', 'success'); loadMappings();
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function resetPassword(id) {
+            if (!confirm('Reset password to default?')) return;
+            try {
+                const res = await Api.post(`/api/admin/users/${id}/reset-password`);
+                toast(`Password reset! Temp: ${res.temporary_password}`, 'info');
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function deactivateUser(id) {
+            if (!confirm('Deactivate this user?')) return;
+            try {
+                await Api.del(`/api/admin/users/${id}`);
+                toast('User deactivated', 'success'); loadTeachers(); loadStudents();
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function deleteClass(id) {
+            if (!confirm('Delete this class?')) return;
+            try { await Api.del(`/api/admin/classes/${id}`); toast('Class deleted', 'success'); loadClasses(); }
+            catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function deleteSubject(id) {
+            if (!confirm('Delete this subject?')) return;
+            try { await Api.del(`/api/admin/subjects/${id}`); toast('Subject deleted', 'success'); loadSubjects(); }
+            catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function deleteCST(id) {
+            if (!confirm('Remove this assignment?')) return;
+            try { await Api.del(`/api/admin/mappings/class-subject/${id}`); toast('Removed', 'success'); loadMappings(); }
+            catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function deleteSC(id) {
+            if (!confirm('Remove student from class?')) return;
+            try { await Api.del(`/api/admin/mappings/student-class/${id}`); toast('Removed', 'success'); loadMappings(); }
+            catch (e) { toast(e.message, 'error'); }
+        }
+
+        // ── Helpers ──
+        function g(id) { return document.getElementById(id).value; }
+        function showModal(id) { document.getElementById(id).classList.add('show'); }
+        function hideModal(id) { document.getElementById(id).classList.remove('show'); }
+        function toast(msg, type = 'info') {
+            const c = document.getElementById('toastContainer');
+            const t = document.createElement('div');
+            t.className = `toast toast-${type}`;
+            t.textContent = msg;
+            c.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        }
+
+        // Click outside modal to close
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.remove('show'); });
+        });
+
+        // Initial load
+        loadStats();
+    </script>
+</body>
+
+</html>

@@ -1,150 +1,160 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="ExamAI - AI-Powered Handwritten Exam Grading using Google Gemini 3. Upload exam sheets and answer keys to get instant grading.">
-    <title>ExamAI — AI Exam Grader</title>
+    <meta name="description"
+        content="ExamAI - AI-Powered Exam Grading Platform. Login to manage exams, submit answers, and view results.">
+    <title>ExamAI — Login</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
-    <!-- Background Canvas -->
+
+<body class="login-body">
     <canvas id="bgCanvas"></canvas>
 
-    <!-- Main App -->
-    <div class="app-container">
-        <!-- Header -->
-        <header class="header">
-            <div class="logo">
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
                 <span class="logo-icon">📝</span>
                 <h1>Exam<span class="accent">AI</span></h1>
-            </div>
-            <p class="tagline">AI-Powered Handwritten Exam Grading</p>
-        </header>
-
-        <!-- Upload Section -->
-        <main class="main-content" id="uploadSection">
-            <div class="upload-grid">
-                <!-- Answer Key Upload -->
-                <div class="upload-card" id="answerKeyCard">
-                    <div class="upload-zone" id="answerKeyZone" data-target="answerKey">
-                        <div class="upload-icon">📋</div>
-                        <h3>Answer Key</h3>
-                        <p>Drag & drop your answer key PDF here</p>
-                        <span class="upload-btn">Browse Files</span>
-                        <input type="file" id="answerKeyInput" accept=".pdf" hidden>
-                    </div>
-                    <div class="file-info" id="answerKeyInfo" style="display: none;">
-                        <span class="file-icon">📄</span>
-                        <span class="file-name" id="answerKeyName"></span>
-                        <button class="remove-btn" data-target="answerKey">✕</button>
-                    </div>
-                </div>
-
-                <!-- Exam Sheet Upload -->
-                <div class="upload-card" id="examSheetCard">
-                    <div class="upload-zone" id="examSheetZone" data-target="examSheet">
-                        <div class="upload-icon">✍️</div>
-                        <h3>Exam Sheet</h3>
-                        <p>Drag & drop the handwritten exam PDF here</p>
-                        <span class="upload-btn">Browse Files</span>
-                        <input type="file" id="examSheetInput" accept=".pdf" hidden>
-                    </div>
-                    <div class="file-info" id="examSheetInfo" style="display: none;">
-                        <span class="file-icon">📄</span>
-                        <span class="file-name" id="examSheetName"></span>
-                        <button class="remove-btn" data-target="examSheet">✕</button>
-                    </div>
-                </div>
+                <p class="tagline">AI-Powered Exam Grading Platform</p>
             </div>
 
-            <!-- Grade Button -->
-            <button class="grade-btn" id="gradeBtn" disabled>
-                <span class="btn-text">🚀 Grade Exam</span>
-                <span class="btn-loading" style="display: none;">
-                    <span class="spinner"></span>
-                    Analyzing with Gemini 3...
-                </span>
-            </button>
-        </main>
+            <form id="loginForm" class="login-form">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon">📧</span>
+                        <input type="email" id="email" placeholder="you@school.edu" required autocomplete="email">
+                    </div>
+                </div>
 
-        <!-- Progress Section -->
-        <section class="progress-section" id="progressSection" style="display: none;">
-            <div class="progress-card">
-                <div class="progress-header">
-                    <span class="spinner-large"></span>
-                    <h2>Grading in Progress</h2>
-                </div>
-                <div class="progress-steps">
-                    <div class="step" id="step1">
-                        <span class="step-icon">📄</span>
-                        <span class="step-text">Converting PDFs to images...</span>
-                    </div>
-                    <div class="step" id="step2">
-                        <span class="step-icon">🔍</span>
-                        <span class="step-text">Analyzing answer key with Gemini 3...</span>
-                    </div>
-                    <div class="step" id="step3">
-                        <span class="step-icon">📝</span>
-                        <span class="step-text">Grading handwritten answers...</span>
-                    </div>
-                    <div class="step" id="step4">
-                        <span class="step-icon">📊</span>
-                        <span class="step-text">Generating grading report...</span>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon">🔒</span>
+                        <input type="password" id="password" placeholder="••••••••" required
+                            autocomplete="current-password">
                     </div>
                 </div>
-                <div class="progress-bar-container">
-                    <div class="progress-bar" id="progressBar"></div>
-                </div>
-                <p class="progress-note">This may take 30-60 seconds depending on the exam length.</p>
+
+                <div id="loginError" class="form-error" style="display: none;"></div>
+
+                <button type="submit" class="login-btn" id="loginBtn">
+                    <span class="btn-text">Sign In</span>
+                    <span class="btn-loading" style="display: none;">
+                        <span class="spinner"></span> Signing in...
+                    </span>
+                </button>
+            </form>
+
+            <div class="login-footer">
+                <p>Powered by <strong>Google Gemini AI</strong></p>
             </div>
-        </section>
-
-        <!-- Results Section -->
-        <section class="results-section" id="resultsSection" style="display: none;">
-            <div class="results-card">
-                <div class="results-header">
-                    <h2>✅ Grading Complete!</h2>
-                    <div class="score-circle" id="scoreCircle">
-                        <span class="score-value" id="scoreValue">--</span>
-                        <span class="score-label">Score</span>
-                    </div>
-                </div>
-                
-                <div class="results-summary" id="resultsSummary"></div>
-                
-                <div class="results-table-container" id="resultsTable"></div>
-                
-                <div class="results-actions">
-                    <button class="download-btn" id="downloadBtn">
-                        📥 Download Report PDF
-                    </button>
-                    <button class="new-btn" id="newGradeBtn">
-                        🔄 Grade Another Exam
-                    </button>
-                </div>
-            </div>
-        </section>
-
-        <!-- Error Section -->
-        <section class="error-section" id="errorSection" style="display: none;">
-            <div class="error-card">
-                <span class="error-icon">⚠️</span>
-                <h2>Grading Failed</h2>
-                <p class="error-message" id="errorMessage"></p>
-                <button class="retry-btn" id="retryBtn">Try Again</button>
-            </div>
-        </section>
-
-        <!-- Footer -->
-        <footer class="footer">
-            <p>Powered by <strong>Google Gemini 3</strong> · No OCR — Native Vision AI</p>
-        </footer>
+        </div>
     </div>
 
-    <script src="app.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        // Redirect if already logged in
+        if (Auth.isLoggedIn()) {
+            Auth.redirectToDashboard();
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorEl = document.getElementById('loginError');
+            const btn = document.getElementById('loginBtn');
+            const btnText = btn.querySelector('.btn-text');
+            const btnLoading = btn.querySelector('.btn-loading');
+
+            errorEl.style.display = 'none';
+            btnText.style.display = 'none';
+            btnLoading.style.display = 'inline-flex';
+            btn.disabled = true;
+
+            try {
+                await Auth.login(email, password);
+                Auth.redirectToDashboard();
+            } catch (err) {
+                errorEl.textContent = err.message || 'Login failed';
+                errorEl.style.display = 'block';
+            } finally {
+                btnText.style.display = 'inline';
+                btnLoading.style.display = 'none';
+                btn.disabled = false;
+            }
+        });
+    </script>
+
+    <!-- Background animation -->
+    <script>
+        const canvas = document.getElementById('bgCanvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2 + 0.5;
+                this.speedX = (Math.random() - 0.5) * 0.5;
+                this.speedY = (Math.random() - 0.5) * 0.5;
+                this.opacity = Math.random() * 0.5 + 0.1;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                if (this.x < 0 || this.x > canvas.width) this.speedX *= -1;
+                if (this.y < 0 || this.y > canvas.height) this.speedY *= -1;
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(99, 102, 241, ${this.opacity})`;
+                ctx.fill();
+            }
+        }
+
+        for (let i = 0; i < 60; i++) particles.push(new Particle());
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => { p.update(); p.draw(); });
+            // Draw connections
+            for (let i = 0; i < particles.length; i++) {
+                for (let j = i + 1; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x;
+                    const dy = particles[i].y - particles[j].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 120) {
+                        ctx.beginPath();
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.strokeStyle = `rgba(99, 102, 241, ${0.1 * (1 - dist / 120)})`;
+                        ctx.lineWidth = 0.5;
+                        ctx.stroke();
+                    }
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+        animate();
+    </script>
 </body>
+
 </html>

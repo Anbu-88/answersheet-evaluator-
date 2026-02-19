@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExamAI — Teacher Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="dashboard">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>Exam<span class="accent">AI</span></h1>
+                <span class="role-badge role-teacher">Teacher</span>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-item active" data-page="dashboard"><span
+                        class="nav-icon">📊</span><span>Dashboard</span></div>
+                <div class="nav-item" data-page="tests"><span class="nav-icon">📝</span><span>My Tests</span></div>
+                <div class="nav-item" data-page="disputes"><span class="nav-icon">⚠️</span><span>Disputes</span><span
+                        class="badge" id="disputeBadge" style="display:none;">0</span></div>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">T</div>
+                    <div>
+                        <div class="user-name" id="userName">Teacher</div>
+                        <div class="user-email" id="userEmail">teacher@school.edu</div>
+                    </div>
+                </div>
+                <button class="logout-btn" onclick="Auth.logout()">🚪 Sign Out</button>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <!-- Dashboard -->
+            <div id="page-dashboard" class="page">
+                <div class="page-header">
+                    <h2>Teacher Dashboard</h2>
+                    <p>Overview of your tests and submissions</p>
+                </div>
+                <div class="stats-grid" id="statsGrid"></div>
+            </div>
+
+            <!-- Tests -->
+            <div id="page-tests" class="page" style="display:none;">
+                <div class="page-header">
+                    <h2>My Tests</h2>
+                    <p>Create and manage exams</p>
+                </div>
+                <div class="content-card">
+                    <div class="content-card-header">
+                        <h3>Tests</h3>
+                        <button class="btn-primary btn-sm" onclick="showCreateTest()">+ Create Test</button>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Class</th>
+                                <th>Subject</th>
+                                <th>Deadline</th>
+                                <th>Status</th>
+                                <th>Submissions</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="testsList"></tbody>
+                    </table>
+                </div>
+
+                <!-- Test Detail -->
+                <div id="testDetail" style="display:none;">
+                    <div class="content-card" id="testDetailCard"></div>
+                </div>
+            </div>
+
+            <!-- Disputes -->
+            <div id="page-disputes" class="page" style="display:none;">
+                <div class="page-header">
+                    <h2>Disputes</h2>
+                    <p>Review student grading complaints</p>
+                </div>
+                <div class="content-card">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Test</th>
+                                <th>Q#</th>
+                                <th>Complaint</th>
+                                <th>Original Marks</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="disputesList"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Test Modal -->
+    <div class="modal-overlay" id="createTestModal">
+        <div class="modal">
+            <h3>Create New Test</h3>
+            <div class="form-group"><label>Title</label><input id="testTitle" placeholder="Mid-term Exam"></div>
+            <div class="form-group"><label>Description</label><textarea id="testDesc" rows="2"
+                    placeholder="Optional description"></textarea></div>
+            <div class="form-group"><label>Class & Subject</label><select id="testAssignment"></select></div>
+            <div class="form-group"><label>Start Time</label><input type="datetime-local" id="testStart"></div>
+            <div class="form-group"><label>End Time (Deadline)</label><input type="datetime-local" id="testEnd"></div>
+            <div class="form-group"><label>Total Marks</label><input type="number" id="testMarks" placeholder="100">
+            </div>
+            <div class="modal-actions"><button class="btn-secondary"
+                    onclick="hideModal('createTestModal')">Cancel</button><button class="btn-primary btn-sm"
+                    onclick="createTest()">Create</button></div>
+        </div>
+    </div>
+
+    <!-- Resolve Dispute Modal -->
+    <div class="modal-overlay" id="resolveModal">
+        <div class="modal">
+            <h3>Resolve Dispute</h3>
+            <div id="disputeInfo"></div>
+            <div class="form-group"><label>Your Response</label><textarea id="resolveResponse" rows="3"
+                    placeholder="Explain your decision..."></textarea></div>
+            <div class="form-group"><label>Updated Marks (leave empty to reject)</label><input type="number" step="0.5"
+                    id="resolveMarks" placeholder="New marks for this question"></div>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="hideModal('resolveModal')">Cancel</button>
+                <button class="btn-danger btn-sm" onclick="resolveDispute('rejected')">Reject</button>
+                <button class="btn-success btn-sm" onclick="resolveDispute('resolved')">Accept & Update</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Answer Key Modal -->
+    <div class="modal-overlay" id="uploadAKModal">
+        <div class="modal">
+            <h3>Upload Answer Key</h3>
+            <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:16px;">Upload the answer key PDF for AI
+                analysis. The system will extract questions, expected answers, and grading criteria.</p>
+            <div class="upload-zone-mini" id="akUploadZone" onclick="document.getElementById('akFile').click()">
+                📄 Click to select Answer Key PDF
+                <input type="file" id="akFile" accept=".pdf" hidden>
+            </div>
+            <div id="akFileName" style="margin-top:8px;font-size:0.85rem;color:var(--accent-light);"></div>
+            <div class="modal-actions"><button class="btn-secondary"
+                    onclick="hideModal('uploadAKModal')">Cancel</button><button class="btn-primary btn-sm"
+                    onclick="uploadAnswerKey()">Upload & Analyze</button></div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        if (!Auth.requireAuth(['teacher'])) throw 'unauthorized';
+
+        const user = Auth.getUser();
+        document.getElementById('userName').textContent = user.full_name;
+        document.getElementById('userEmail').textContent = user.email;
+        document.getElementById('userAvatar').textContent = user.full_name.charAt(0);
+
+        let currentTestId = null;
+        let currentDisputeId = null;
+        let assignments = [];
+
+        // Nav
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+                item.classList.add('active');
+                document.getElementById('page-' + item.dataset.page).style.display = 'block';
+                loadPage(item.dataset.page);
+            });
+        });
+
+        async function loadPage(page) {
+            switch (page) {
+                case 'dashboard': loadStats(); break;
+                case 'tests': loadTests(); break;
+                case 'disputes': loadDisputes(); break;
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const s = await Api.get('/api/teacher/stats');
+                document.getElementById('statsGrid').innerHTML = `
+            <div class="stat-card"><div class="stat-icon">📝</div><div class="stat-value">${s.total_tests}</div><div class="stat-label">Total Tests</div></div>
+            <div class="stat-card"><div class="stat-icon">🟢</div><div class="stat-value">${s.active_tests}</div><div class="stat-label">Active Tests</div></div>
+            <div class="stat-card"><div class="stat-icon">📄</div><div class="stat-value">${s.total_submissions}</div><div class="stat-label">Submissions</div></div>
+            <div class="stat-card"><div class="stat-icon">⚠️</div><div class="stat-value">${s.pending_disputes}</div><div class="stat-label">Open Disputes</div></div>
+            <div class="stat-card"><div class="stat-icon">🏫</div><div class="stat-value">${s.assigned_classes}</div><div class="stat-label">Assigned Classes</div></div>
+        `;
+                if (s.pending_disputes > 0) {
+                    document.getElementById('disputeBadge').style.display = 'inline';
+                    document.getElementById('disputeBadge').textContent = s.pending_disputes;
+                }
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function loadTests() {
+            try {
+                const tests = await Api.get('/api/teacher/tests');
+                const tbody = document.getElementById('testsList');
+                tbody.innerHTML = tests.length === 0 ? '<tr><td colspan="7" class="empty-state">No tests yet. Create your first test!</td></tr>' :
+                    tests.map(t => `<tr>
+                <td><strong>${t.title}</strong></td>
+                <td>${t.class_name || ''}</td>
+                <td>${t.subject_name || ''}</td>
+                <td>${new Date(t.end_time).toLocaleString()}</td>
+                <td><span class="status status-${t.status}">${t.status}</span></td>
+                <td>${t.graded_count}/${t.submission_count}</td>
+                <td>
+                    ${!t.answer_key_uploaded ? `<button class="btn-sm btn-secondary" onclick="showUploadAK(${t.id})">📄 Upload Key</button>` : ''}
+                    ${t.answer_key_uploaded && t.status !== 'graded' ? `<button class="btn-sm btn-success" onclick="triggerGrading(${t.id})">🚀 Grade</button>` : ''}
+                    <button class="btn-icon btn-sm" onclick="viewSubmissions(${t.id})" title="View Submissions">👁️</button>
+                </td>
+            </tr>`).join('');
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function showCreateTest() {
+            try {
+                assignments = await Api.get('/api/teacher/assignments');
+                const sel = document.getElementById('testAssignment');
+                sel.innerHTML = assignments.map(a => `<option value="${a.class_id}|${a.subject_id}">${a.class_name} ${a.class_section} — ${a.subject_name}</option>`).join('');
+                showModal('createTestModal');
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function createTest() {
+            try {
+                const [class_id, subject_id] = document.getElementById('testAssignment').value.split('|').map(Number);
+                await Api.post('/api/teacher/tests', {
+                    title: g('testTitle'), description: g('testDesc'),
+                    class_id, subject_id,
+                    start_time: new Date(g('testStart')).toISOString(),
+                    end_time: new Date(g('testEnd')).toISOString(),
+                    total_marks: +g('testMarks'),
+                });
+                hideModal('createTestModal'); toast('Test created!', 'success'); loadTests();
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        function showUploadAK(testId) {
+            currentTestId = testId;
+            document.getElementById('akFileName').textContent = '';
+            document.getElementById('akFile').value = '';
+            showModal('uploadAKModal');
+        }
+
+        document.getElementById('akFile').addEventListener('change', (e) => {
+            document.getElementById('akFileName').textContent = e.target.files[0]?.name || '';
+        });
+
+        async function uploadAnswerKey() {
+            const file = document.getElementById('akFile').files[0];
+            if (!file) return toast('Select a PDF file', 'error');
+
+            const fd = new FormData();
+            fd.append('answer_key', file);
+            try {
+                await Api.upload(`/api/teacher/tests/${currentTestId}/answer-key`, fd);
+                hideModal('uploadAKModal');
+                toast('Answer key uploaded! AI is analyzing it...', 'success');
+                loadTests();
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function triggerGrading(testId) {
+            if (!confirm('Start grading all submissions? This may take a few minutes.')) return;
+            try {
+                const res = await Api.post(`/api/teacher/tests/${testId}/grade`);
+                toast(res.message, 'success');
+                loadTests();
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function viewSubmissions(testId) {
+            try {
+                const subs = await Api.get(`/api/teacher/tests/${testId}/submissions`);
+                const detail = document.getElementById('testDetail');
+                detail.style.display = 'block';
+                document.getElementById('testDetailCard').innerHTML = `
+            <div class="content-card-header"><h3>Submissions (${subs.length})</h3></div>
+            ${subs.length === 0 ? '<div class="empty-state"><div class="empty-icon">📭</div><p>No submissions yet</p></div>' :
+                        `<table class="data-table"><thead><tr><th>Student</th><th>Submitted</th><th>Status</th><th>Score</th></tr></thead><tbody>
+             ${subs.map(s => `<tr>
+                <td>${s.student_name || 'Student #' + s.student_id}</td>
+                <td>${new Date(s.submitted_at).toLocaleString()}</td>
+                <td><span class="status status-${s.grading_status}">${s.grading_status}</span></td>
+                <td>${s.marks_obtained !== null ? `<span class="score-display ${s.percentage >= 70 ? 'high' : s.percentage >= 40 ? 'medium' : 'low'}">${s.marks_obtained}/${s.total_marks} (${s.percentage}%)</span>` : '-'}</td>
+             </tr>`).join('')}
+             </tbody></table>`}
+        `;
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function loadDisputes() {
+            try {
+                const disputes = await Api.get('/api/teacher/disputes');
+                const tbody = document.getElementById('disputesList');
+                tbody.innerHTML = disputes.length === 0 ? '<tr><td colspan="7" class="empty-state">No disputes</td></tr>' :
+                    disputes.map(d => `<tr>
+                <td>${d.student_name || ''}</td>
+                <td>${d.test_title || ''}</td>
+                <td>Q${d.question_number}</td>
+                <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;">${d.description}</td>
+                <td>${d.marks_before !== null ? d.marks_before : '-'}</td>
+                <td><span class="status status-${d.status}">${d.status}</span></td>
+                <td>${d.status === 'open' ? `<button class="btn-sm btn-primary" onclick="showResolve(${d.id}, '${d.question_number}', ${d.marks_before}, '${escape(d.description)}')">Review</button>` : (d.teacher_response || '-')}</td>
+            </tr>`).join('');
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        function showResolve(id, qnum, marksBefore, desc) {
+            currentDisputeId = id;
+            document.getElementById('disputeInfo').innerHTML = `
+        <p style="margin-bottom:12px;"><strong>Question ${qnum}</strong> — Current marks: <strong>${marksBefore}</strong></p>
+        <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:16px;">Student says: "${unescape(desc)}"</p>
+    `;
+            document.getElementById('resolveResponse').value = '';
+            document.getElementById('resolveMarks').value = '';
+            showModal('resolveModal');
+        }
+
+        async function resolveDispute(status) {
+            try {
+                const body = {
+                    teacher_response: g('resolveResponse'),
+                    status,
+                };
+                const marks = g('resolveMarks');
+                if (status === 'resolved' && marks) body.marks_after = +marks;
+
+                await Api.put(`/api/teacher/disputes/${currentDisputeId}/resolve`, body);
+                hideModal('resolveModal');
+                toast(`Dispute ${status}!`, 'success');
+                loadDisputes();
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        function g(id) { return document.getElementById(id).value; }
+        function showModal(id) { document.getElementById(id).classList.add('show'); }
+        function hideModal(id) { document.getElementById(id).classList.remove('show'); }
+        function toast(msg, type = 'info') {
+            const c = document.getElementById('toastContainer');
+            const t = document.createElement('div');
+            t.className = `toast toast-${type}`;
+            t.textContent = msg;
+            c.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        }
+
+        document.querySelectorAll('.modal-overlay').forEach(o => {
+            o.addEventListener('click', (e) => { if (e.target === o) o.classList.remove('show'); });
+        });
+
+        loadStats();
+    </script>
+</body>
+
+</html>

@@ -1,18 +1,27 @@
 """
-ExamAI - Main Application
-FastAPI entry point with CORS and route mounting.
+ExamAI v2 - Main Application
+FastAPI entry point with CORS, routers, and startup DB initialization.
 """
 
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from routes.grading import router as grading_router
+from routes.auth import router as auth_router
+from routes.admin import router as admin_router
+from routes.teacher import router as teacher_router
+from routes.student import router as student_router
 from config import APP_TITLE, APP_VERSION
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
 
 app = FastAPI(
     title=APP_TITLE,
     version=APP_VERSION,
-    description="AI-Powered Handwritten Exam Grading using Gemini 3",
+    description="AI-Powered Handwritten Exam Grading Platform for Schools & Colleges",
 )
 
 # CORS — allow frontend to call the API
@@ -25,7 +34,17 @@ app.add_middleware(
 )
 
 # Mount API routes
-app.include_router(grading_router)
+app.include_router(auth_router)
+app.include_router(admin_router)
+app.include_router(teacher_router)
+app.include_router(student_router)
+
+
+@app.on_event("startup")
+def on_startup():
+    """Initialize database and seed data on startup."""
+    from init_db import init_database
+    init_database()
 
 
 @app.get("/")
@@ -34,13 +53,10 @@ async def root():
         "app": APP_TITLE,
         "version": APP_VERSION,
         "docs": "/docs",
-        "endpoints": {
-            "grade_exam": "POST /api/grade",
-            "analyze_answer_key": "POST /api/analyze-answer-key",
-        }
+        "login": "POST /api/auth/login",
     }
 
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    return {"status": "ok", "version": APP_VERSION}

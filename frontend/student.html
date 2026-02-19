@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExamAI — Student Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="dashboard">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>Exam<span class="accent">AI</span></h1>
+                <span class="role-badge role-student">Student</span>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-item active" data-page="dashboard"><span
+                        class="nav-icon">📊</span><span>Dashboard</span></div>
+                <div class="nav-item" data-page="tests"><span class="nav-icon">📝</span><span>My Tests</span></div>
+                <div class="nav-item" data-page="results"><span class="nav-icon">📊</span><span>Results</span></div>
+                <div class="nav-item" data-page="disputes"><span class="nav-icon">⚠️</span><span>Disputes</span></div>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">S</div>
+                    <div>
+                        <div class="user-name" id="userName">Student</div>
+                        <div class="user-email" id="userEmail">student@school.edu</div>
+                    </div>
+                </div>
+                <button class="logout-btn" onclick="Auth.logout()">🚪 Sign Out</button>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <!-- Dashboard -->
+            <div id="page-dashboard" class="page">
+                <div class="page-header">
+                    <h2>Welcome back!</h2>
+                    <p>Your exam overview</p>
+                </div>
+                <div class="stats-grid" id="statsGrid"></div>
+            </div>
+
+            <!-- Tests -->
+            <div id="page-tests" class="page" style="display:none;">
+                <div class="page-header">
+                    <h2>My Tests</h2>
+                    <p>View and submit your exams</p>
+                </div>
+                <div id="testCards"></div>
+            </div>
+
+            <!-- Results -->
+            <div id="page-results" class="page" style="display:none;">
+                <div class="page-header">
+                    <h2>Results</h2>
+                    <p>View your grading results and reports</p>
+                </div>
+                <div id="resultsList"></div>
+            </div>
+
+            <!-- Disputes -->
+            <div id="page-disputes" class="page" style="display:none;">
+                <div class="page-header">
+                    <h2>Disputes</h2>
+                    <p>Track your dispute requests</p>
+                </div>
+                <div class="content-card">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Test</th>
+                                <th>Question</th>
+                                <th>Your Complaint</th>
+                                <th>Status</th>
+                                <th>Response</th>
+                                <th>Marks</th>
+                            </tr>
+                        </thead>
+                        <tbody id="disputesList"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Submit Modal -->
+    <div class="modal-overlay" id="submitModal">
+        <div class="modal">
+            <h3>Submit Answer Sheet</h3>
+            <p id="submitTestInfo" style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:16px;"></p>
+            <div class="upload-zone-mini" onclick="document.getElementById('submitFile').click()">
+                📄 Click to select your Answer Sheet PDF
+                <input type="file" id="submitFile" accept=".pdf" hidden>
+            </div>
+            <div id="submitFileName" style="margin-top:8px;font-size:0.85rem;color:var(--accent-light);"></div>
+            <div class="modal-actions"><button class="btn-secondary"
+                    onclick="hideModal('submitModal')">Cancel</button><button class="btn-primary btn-sm"
+                    onclick="submitAnswer()">Submit</button></div>
+        </div>
+    </div>
+
+    <!-- Dispute Modal -->
+    <div class="modal-overlay" id="disputeModal">
+        <div class="modal">
+            <h3>Raise a Dispute</h3>
+            <div class="form-group"><label>Question Number</label><select id="disputeQ"></select></div>
+            <div class="form-group"><label>Describe the issue</label><textarea id="disputeDesc" rows="4"
+                    placeholder="Explain why you think the marks should be revised..."></textarea></div>
+            <div class="modal-actions"><button class="btn-secondary"
+                    onclick="hideModal('disputeModal')">Cancel</button><button class="btn-primary btn-sm"
+                    onclick="raiseDispute()">Submit Dispute</button></div>
+        </div>
+    </div>
+
+    <!-- Result Detail Modal -->
+    <div class="modal-overlay" id="resultModal">
+        <div class="modal" style="max-width:700px;">
+            <h3 id="resultModalTitle">Grading Details</h3>
+            <div id="resultDetail"></div>
+            <div class="modal-actions"><button class="btn-secondary" onclick="hideModal('resultModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        if (!Auth.requireAuth(['student'])) throw 'unauthorized';
+
+        const user = Auth.getUser();
+        document.getElementById('userName').textContent = user.full_name;
+        document.getElementById('userEmail').textContent = user.email;
+        document.getElementById('userAvatar').textContent = user.full_name.charAt(0);
+
+        let currentSubmitTestId = null;
+        let currentDisputeSubmissionId = null;
+        let currentResults = [];
+
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+                item.classList.add('active');
+                document.getElementById('page-' + item.dataset.page).style.display = 'block';
+                loadPage(item.dataset.page);
+            });
+        });
+
+        async function loadPage(page) {
+            switch (page) {
+                case 'dashboard': loadStats(); break;
+                case 'tests': loadTests(); break;
+                case 'results': loadResults(); break;
+                case 'disputes': loadDisputes(); break;
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const s = await Api.get('/api/student/stats');
+                document.getElementById('statsGrid').innerHTML = `
+            <div class="stat-card"><div class="stat-icon">📝</div><div class="stat-value">${s.total_tests}</div><div class="stat-label">Total Tests</div></div>
+            <div class="stat-card"><div class="stat-icon">⏳</div><div class="stat-value">${s.pending_tests}</div><div class="stat-label">Pending</div></div>
+            <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-value">${s.completed_tests}</div><div class="stat-label">Submitted</div></div>
+            <div class="stat-card"><div class="stat-icon">📈</div><div class="stat-value">${s.average_score !== null ? s.average_score + '%' : '-'}</div><div class="stat-label">Avg Score</div></div>
+            <div class="stat-card"><div class="stat-icon">⚠️</div><div class="stat-value">${s.open_disputes}</div><div class="stat-label">Open Disputes</div></div>
+        `;
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function loadTests() {
+            try {
+                const tests = await Api.get('/api/student/tests');
+                const container = document.getElementById('testCards');
+
+                if (tests.length === 0) {
+                    container.innerHTML = '<div class="content-card"><div class="empty-state"><div class="empty-icon">📭</div><p>No tests assigned to your class yet</p></div></div>';
+                    return;
+                }
+
+                container.innerHTML = tests.map(t => {
+                    const now = new Date();
+                    const end = new Date(t.end_time);
+                    const start = new Date(t.start_time);
+                    const timeLeft = end > now ? Math.ceil((end - now) / (1000 * 60 * 60)) + 'h left' : 'Closed';
+
+                    return `<div class="content-card" style="margin-bottom:16px;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                    <div>
+                        <h3 style="margin-bottom:4px;">${t.title}</h3>
+                        <p style="font-size:0.85rem;color:var(--text-secondary);">${t.subject_name} · ${t.class_name}</p>
+                        <p style="font-size:0.8rem;color:var(--text-muted);margin-top:4px;">
+                            ${start.toLocaleString()} → ${end.toLocaleString()} · Total: ${t.total_marks} marks
+                        </p>
+                    </div>
+                    <div style="text-align:right;">
+                        ${t.has_submitted
+                            ? `<span class="status status-${t.grading_status || 'pending'}">${t.grading_status || 'submitted'}</span>
+                               ${t.marks_obtained !== null ? `<div style="margin-top:8px;font-size:1.2rem;font-weight:700;" class="score-display ${(t.marks_obtained / t.total_marks * 100) >= 70 ? 'high' : (t.marks_obtained / t.total_marks * 100) >= 40 ? 'medium' : 'low'}">${t.marks_obtained}/${t.total_marks}</div>` : ''}`
+                            : t.can_submit
+                                ? `<button class="btn-primary btn-sm" onclick="showSubmit(${t.id}, '${t.title}')">📤 Submit</button>
+                                   <div style="margin-top:4px;font-size:0.75rem;color:var(--warning);">${timeLeft}</div>`
+                                : `<span class="status status-closed">${now < start ? 'Not started' : 'Closed'}</span>`
+                        }
+                    </div>
+                </div>
+                ${t.description ? `<p style="font-size:0.85rem;color:var(--text-secondary);margin-top:8px;">${t.description}</p>` : ''}
+            </div>`;
+                }).join('');
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        function showSubmit(testId, title) {
+            currentSubmitTestId = testId;
+            document.getElementById('submitTestInfo').textContent = `Submitting for: ${title}`;
+            document.getElementById('submitFile').value = '';
+            document.getElementById('submitFileName').textContent = '';
+            showModal('submitModal');
+        }
+
+        document.getElementById('submitFile').addEventListener('change', (e) => {
+            document.getElementById('submitFileName').textContent = e.target.files[0]?.name || '';
+        });
+
+        async function submitAnswer() {
+            const file = document.getElementById('submitFile').files[0];
+            if (!file) return toast('Select a PDF file', 'error');
+
+            const fd = new FormData();
+            fd.append('answer_sheet', file);
+            try {
+                await Api.upload(`/api/student/tests/${currentSubmitTestId}/submit`, fd);
+                hideModal('submitModal');
+                toast('Answer sheet submitted successfully!', 'success');
+                loadTests();
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function loadResults() {
+            try {
+                currentResults = await Api.get('/api/student/results');
+                const container = document.getElementById('resultsList');
+
+                if (currentResults.length === 0) {
+                    container.innerHTML = '<div class="content-card"><div class="empty-state"><div class="empty-icon">📊</div><p>No results yet</p></div></div>';
+                    return;
+                }
+
+                container.innerHTML = currentResults.map(r => {
+                    const pct = r.percentage !== null ? r.percentage : null;
+                    const scoreClass = pct !== null ? (pct >= 70 ? 'high' : pct >= 40 ? 'medium' : 'low') : '';
+
+                    return `<div class="content-card" style="margin-bottom:16px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <div>
+                        <h3>${r.test_title}</h3>
+                        <p style="font-size:0.85rem;color:var(--text-secondary);">${r.subject_name} · Submitted: ${new Date(r.submitted_at).toLocaleString()}</p>
+                    </div>
+                    <div style="text-align:right;">
+                        <span class="status status-${r.grading_status}">${r.grading_status}</span>
+                        ${r.marks_obtained !== null ? `<div style="font-size:1.5rem;font-weight:700;margin-top:4px;" class="score-display ${scoreClass}">${r.marks_obtained}/${r.total_marks}</div><div style="font-size:0.85rem;color:var(--text-muted);">${pct}%</div>` : ''}
+                    </div>
+                </div>
+                ${r.grading_status === 'graded' ? `
+                    <div style="margin-top:12px;display:flex;gap:8px;">
+                        <button class="btn-secondary btn-sm" onclick="viewDetail(${r.id})">📋 View Details</button>
+                        ${r.has_report ? `<button class="btn-primary btn-sm" onclick="downloadReport(${r.id})">📥 Download PDF</button>` : ''}
+                        <button class="btn-danger btn-sm" onclick="showDispute(${r.id})">⚠️ Raise Dispute</button>
+                    </div>
+                ` : ''}
+            </div>`;
+                }).join('');
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        function viewDetail(submissionId) {
+            const r = currentResults.find(x => x.id === submissionId);
+            if (!r || !r.grading_result) return toast('Details not available', 'error');
+
+            const gr = r.grading_result;
+            document.getElementById('resultModalTitle').textContent = r.test_title + ' — Details';
+            document.getElementById('resultDetail').innerHTML = `
+        <div style="margin-bottom:16px;">
+            <p><strong>Student:</strong> ${gr.student_name || user.full_name}</p>
+            <p><strong>Score:</strong> ${gr.total_marks_obtained}/${gr.total_marks_possible} (${r.percentage}%)</p>
+            ${gr.overall_feedback ? `<p style="margin-top:8px;font-size:0.85rem;color:var(--text-secondary);"><strong>Feedback:</strong> ${gr.overall_feedback}</p>` : ''}
+        </div>
+        ${(gr.results || []).map(q => `
+            <div class="question-result">
+                <div class="question-result-header">
+                    <h4>Question ${q.question_number} ${q.question_text ? '— ' + q.question_text : ''}</h4>
+                    <span class="score-display ${(q.marks_obtained / q.max_marks * 100) >= 70 ? 'high' : (q.marks_obtained / q.max_marks * 100) >= 40 ? 'medium' : 'low'}">${q.marks_obtained}/${q.max_marks}</span>
+                </div>
+                <p><span class="label">Your Answer:</span> ${q.student_answer_summary || '-'}</p>
+                <p><span class="label">Expected:</span> ${q.expected_answer_summary || '-'}</p>
+                <p><span class="label">Reasoning:</span> ${q.reasoning || '-'}</p>
+                ${q.manually_updated ? `<p style="color:var(--warning);font-size:0.8rem;margin-top:4px;">✏️ Manually updated by teacher${q.teacher_note ? ': ' + q.teacher_note : ''}</p>` : ''}
+            </div>
+        `).join('')}
+    `;
+            showModal('resultModal');
+        }
+
+        async function downloadReport(submissionId) {
+            try {
+                const blob = await Api.downloadBlob(`/api/student/results/${submissionId}/report`);
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = 'grading_report.pdf'; a.click();
+                URL.revokeObjectURL(url);
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        function showDispute(submissionId) {
+            currentDisputeSubmissionId = submissionId;
+            const r = currentResults.find(x => x.id === submissionId);
+            if (!r || !r.grading_result) return toast('Cannot dispute — no grading data', 'error');
+
+            const questions = r.grading_result.results || [];
+            document.getElementById('disputeQ').innerHTML = questions.map(q =>
+                `<option value="${q.question_number}">Q${q.question_number} — ${q.marks_obtained}/${q.max_marks} marks</option>`
+            ).join('');
+            document.getElementById('disputeDesc').value = '';
+            showModal('disputeModal');
+        }
+
+        async function raiseDispute() {
+            try {
+                await Api.post('/api/student/disputes', {
+                    submission_id: currentDisputeSubmissionId,
+                    question_number: document.getElementById('disputeQ').value,
+                    description: g('disputeDesc'),
+                });
+                hideModal('disputeModal');
+                toast('Dispute submitted! Your teacher will review it.', 'success');
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        async function loadDisputes() {
+            try {
+                const disputes = await Api.get('/api/student/disputes');
+                const tbody = document.getElementById('disputesList');
+                tbody.innerHTML = disputes.length === 0 ? '<tr><td colspan="6" class="empty-state">No disputes raised</td></tr>' :
+                    disputes.map(d => `<tr>
+                <td>${d.test_title || ''}</td>
+                <td>Q${d.question_number}</td>
+                <td style="max-width:200px;">${d.description}</td>
+                <td><span class="status status-${d.status}">${d.status}</span></td>
+                <td>${d.teacher_response || '-'}</td>
+                <td>${d.marks_before !== null ? d.marks_before : '-'} ${d.marks_after !== null ? '→ ' + d.marks_after : ''}</td>
+            </tr>`).join('');
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        function g(id) { return document.getElementById(id).value; }
+        function showModal(id) { document.getElementById(id).classList.add('show'); }
+        function hideModal(id) { document.getElementById(id).classList.remove('show'); }
+        function toast(msg, type = 'info') {
+            const c = document.getElementById('toastContainer');
+            const t = document.createElement('div');
+            t.className = `toast toast-${type}`;
+            t.textContent = msg;
+            c.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        }
+
+        document.querySelectorAll('.modal-overlay').forEach(o => {
+            o.addEventListener('click', (e) => { if (e.target === o) o.classList.remove('show'); });
+        });
+
+        loadStats();
+    </script>
+</body>
+
+</html>
