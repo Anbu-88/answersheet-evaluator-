@@ -7,6 +7,7 @@ import os
 import uuid
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
@@ -124,9 +125,9 @@ async def create_test(
         start_time=data.start_time,
         end_time=data.end_time,
         total_marks=data.total_marks,
+        test_type=data.test_type,
         status=TestStatus.active,
     )
-    db.add(test)
     db.commit()
     db.refresh(test)
 
@@ -280,6 +281,59 @@ async def list_my_disputes(
     return [_dispute_to_response(d) for d in disputes]
 
 
+@router.get("/disputes/{dispute_id}/report")
+async def download_student_report(
+    dispute_id: int,
+    current_user: User = Depends(teacher_dep),
+    db: Session = Depends(get_db),
+):
+    """Download the grading report PDF for a student from a dispute."""
+    dispute = db.query(Dispute).filter(Dispute.id == dispute_id).first()
+    if not dispute:
+        raise HTTPException(404, "Dispute not found")
+
+    # Verify this dispute belongs to one of the teacher's tests
+    submission = db.query(Submission).filter(Submission.id == dispute.submission_id).first()
+    test = db.query(Test).filter(Test.id == submission.test_id, Test.teacher_id == current_user.id).first()
+    if not test:
+        raise HTTPException(403, "Access denied")
+
+    if not submission.report_pdf_path or not os.path.exists(submission.report_pdf_path):
+        raise HTTPException(404, "Report not available")
+
+    return FileResponse(
+        submission.report_pdf_path,
+        media_type="application/pdf",
+        filename=f"student_report_{submission.student_id}.pdf"
+    )
+
+
+@router.get("/disputes/{dispute_id}/answer")
+async def download_student_answer(
+    dispute_id: int,
+    current_user: User = Depends(teacher_dep),
+    db: Session = Depends(get_db),
+):
+    """Download the original handwritten answer PDF for a student from a dispute."""
+    dispute = db.query(Dispute).filter(Dispute.id == dispute_id).first()
+    if not dispute:
+        raise HTTPException(404, "Dispute not found")
+
+    submission = db.query(Submission).filter(Submission.id == dispute.submission_id).first()
+    test = db.query(Test).filter(Test.id == submission.test_id, Test.teacher_id == current_user.id).first()
+    if not test:
+        raise HTTPException(403, "Access denied")
+
+    if not submission.answer_pdf_path or not os.path.exists(submission.answer_pdf_path):
+        raise HTTPException(404, "Original answer PDF not found")
+
+    return FileResponse(
+        submission.answer_pdf_path,
+        media_type="application/pdf",
+        filename=f"student_answer_{submission.student_id}.pdf"
+    )
+
+
 @router.put("/disputes/{dispute_id}/resolve", response_model=DisputeResponse)
 async def resolve_dispute(
     dispute_id: int,
@@ -347,6 +401,7 @@ def _test_to_response(test: Test, db: Session) -> TestResponse:
         end_time=test.end_time,
         total_marks=test.total_marks,
         status=test.status.value,
+        test_type=test.test_type.value,
         answer_key_path=test.answer_key_path,
         answer_key_uploaded=test.answer_key_path is not None,
         created_at=test.created_at,
@@ -381,8 +436,17 @@ def _submission_to_response(s: Submission) -> SubmissionResponse:
 
 def _dispute_to_response(d: Dispute) -> DisputeResponse:
     test_title = None
-    if d.submission and d.submission.test:
-        test_title = d.submission.test.title
+    q_total = None
+    if d.submission:
+        if d.submission.test:
+            test_title = d.submission.test.title
+        
+        # Extract total marks for this specific question
+        if d.submission.grading_result and "results" in d.submission.grading_result:
+            for r in d.submission.grading_result["results"]:
+                if str(r.get("question_number")) == str(d.question_number):
+                    q_total = r.get("max_marks")
+                    break
 
     return DisputeResponse(
         id=d.id,
@@ -399,4 +463,6 @@ def _dispute_to_response(d: Dispute) -> DisputeResponse:
         resolved_at=d.resolved_at,
         student_name=d.student.full_name if d.student else None,
         test_title=test_title,
+        report_pdf_path=d.submission.report_pdf_path if d.submission else None,
+        question_total_marks=q_total,
     )
