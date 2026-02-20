@@ -127,17 +127,52 @@
 
     <!-- Resolve Dispute Modal -->
     <div class="modal-overlay" id="resolveModal">
-        <div class="modal">
-            <h3>Resolve Dispute</h3>
-            <div id="disputeInfo"></div>
-            <div class="form-group"><label>Your Response</label><textarea id="resolveResponse" rows="3"
-                    placeholder="Explain your decision..."></textarea></div>
-            <div class="form-group"><label>Updated Marks (leave empty to reject)</label><input type="number" step="0.5"
-                    id="resolveMarks" placeholder="New marks for this question"></div>
-            <div class="modal-actions">
-                <button class="btn-secondary" onclick="hideModal('resolveModal')">Cancel</button>
-                <button class="btn-danger btn-sm" onclick="resolveDispute('rejected')">Reject</button>
-                <button class="btn-success btn-sm" onclick="resolveDispute('resolved')">Accept & Update</button>
+        <div class="modal modal-xl">
+            <button class="modal-close-btn" onclick="hideModal('resolveModal')">&times;</button>
+            <div class="modal-split">
+                <!-- Preview Pane -->
+                <div class="modal-side-preview">
+                    <div class="pdf-header">
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn-sm btn-primary" id="btnShowReport"
+                                onclick="switchPdfTab('report')">Graded Report</button>
+                            <button class="btn-sm btn-secondary" id="btnShowAnswer"
+                                onclick="switchPdfTab('answer')">Original Answer</button>
+                        </div>
+                        <button class="btn-secondary btn-sm" id="openPdfBtn"
+                            style="padding: 2px 8px; font-size: 0.7rem;">Open in New Tab</button>
+                    </div>
+                    <div id="pdfLoading"
+                        style="flex: 1; display: none; align-items: center; justify-content: center; color: var(--text-secondary);">
+                        <div class="spinner"></div><span style="margin-left: 10px;">Loading PDFs...</span>
+                    </div>
+                    <iframe id="reportFrame" class="pdf-iframe"></iframe>
+                    <iframe id="answerFrame" class="pdf-iframe" style="display:none;"></iframe>
+                </div>
+
+                <!-- Form Pane -->
+                <div class="modal-side-form">
+                    <h3>Resolve Dispute</h3>
+                    <div id="disputeInfo"></div>
+                    <div class="form-group">
+                        <label>Your Response (Visible to Student)</label>
+                        <textarea id="resolveResponse" rows="4" placeholder="Explain your decision..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Updated Marks (Current is <span id="currentMarksLabel">0</span>)</label>
+                        <input type="number" step="0.5" id="resolveMarks" placeholder="New marks for this question">
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Leave empty or set to
+                            current marks to reject change.</p>
+                    </div>
+                    <div class="modal-actions" id="resolveActions">
+                        <button class="btn-secondary" onclick="hideModal('resolveModal')">Cancel</button>
+                        <button class="btn-danger btn-sm" onclick="resolveDispute('rejected')">Reject</button>
+                        <button class="btn-success btn-sm" onclick="resolveDispute('resolved')">Accept & Update</button>
+                    </div>
+                    <div class="modal-actions" id="viewOnlyActions" style="display:none;">
+                        <button class="btn-secondary" onclick="hideModal('resolveModal')">Close</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -173,7 +208,9 @@
 
         let currentTestId = null;
         let currentDisputeId = null;
+        let currentMaxMarks = 0;
         let assignments = [];
+        let allDisputes = [];
 
         // Nav
         document.querySelectorAll('.nav-item').forEach(item => {
@@ -311,40 +348,155 @@
 
         async function loadDisputes() {
             try {
-                const disputes = await Api.get('/api/teacher/disputes');
+                allDisputes = await Api.get('/api/teacher/disputes');
                 const tbody = document.getElementById('disputesList');
-                tbody.innerHTML = disputes.length === 0 ? '<tr><td colspan="7" class="empty-state">No disputes</td></tr>' :
-                    disputes.map(d => `<tr>
-                <td>${d.student_name || ''}</td>
-                <td>${d.test_title || ''}</td>
-                <td>Q${d.question_number}</td>
-                <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;">${d.description}</td>
-                <td>${d.marks_before !== null ? d.marks_before : '-'}</td>
-                <td><span class="status status-${d.status}">${d.status}</span></td>
-                <td>${d.status === 'open' ? `<button class="btn-sm btn-primary" onclick="showResolve(${d.id}, '${d.question_number}', ${d.marks_before}, '${escape(d.description)}')">Review</button>` : (d.teacher_response || '-')}</td>
-            </tr>`).join('');
+                if (allDisputes.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No disputes found.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = allDisputes.map(d => {
+                    const isOpen = d.status === 'open';
+                    return `<tr>
+                        <td>${d.student_name || 'Student'}</td>
+                        <td>${d.test_title || 'Test'}</td>
+                        <td>Q${d.question_number}</td>
+                        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;" title="${d.description}">${d.description}</td>
+                        <td>${d.marks_before !== null ? d.marks_before : '-'}</td>
+                        <td><span class="status status-${d.status}">${d.status}</span></td>
+                        <td>
+                            <div style="display:flex; gap:8px;">
+                                <button class="btn-sm ${isOpen ? 'btn-primary' : 'btn-secondary'}" onclick="showResolve(${d.id})">${isOpen ? 'Review' : 'View'}</button>
+                                <button class="btn-icon btn-sm" onclick="previewPDF(${d.id})" title="View Graded PDF">👁️</button>
+                            </div>
+                        </td>
+                    </tr>`;
+                }).join('');
             } catch (e) { toast(e.message, 'error'); }
         }
 
-        function showResolve(id, qnum, marksBefore, desc) {
+        let currentPdfUrl = null;
+
+        async function previewPDF(disputeId) {
+            try {
+                const blob = await Api.downloadBlob(`/api/teacher/disputes/${disputeId}/report`);
+                const url = URL.createObjectURL(blob);
+                window.open(url, '_blank');
+            } catch (e) { toast(e.message, 'error'); }
+        }
+
+        function switchPdfTab(type) {
+            const reportFrame = document.getElementById('reportFrame');
+            const answerFrame = document.getElementById('answerFrame');
+            const btnReport = document.getElementById('btnShowReport');
+            const btnAnswer = document.getElementById('btnShowAnswer');
+
+            if (type === 'report') {
+                reportFrame.style.display = 'block';
+                answerFrame.style.display = 'none';
+                btnReport.className = 'btn-sm btn-primary';
+                btnAnswer.className = 'btn-sm btn-secondary';
+                document.getElementById('openPdfBtn').onclick = () => window.open(reportFrame.src, '_blank');
+            } else {
+                reportFrame.style.display = 'none';
+                answerFrame.style.display = 'block';
+                btnReport.className = 'btn-sm btn-secondary';
+                btnAnswer.className = 'btn-sm btn-primary';
+                document.getElementById('openPdfBtn').onclick = () => window.open(answerFrame.src, '_blank');
+            }
+        }
+
+        async function showResolve(id) {
+            const d = allDisputes.find(item => item.id === id);
+            if (!d) return;
+
             currentDisputeId = id;
+            currentMaxMarks = d.question_total_marks || 0;
+            const isOpen = d.status === 'open';
+
             document.getElementById('disputeInfo').innerHTML = `
-        <p style="margin-bottom:12px;"><strong>Question ${qnum}</strong> — Current marks: <strong>${marksBefore}</strong></p>
-        <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:16px;">Student says: "${unescape(desc)}"</p>
-    `;
-            document.getElementById('resolveResponse').value = '';
-            document.getElementById('resolveMarks').value = '';
+                <p style="margin-bottom:12px;"><strong>Question ${d.question_number}</strong> — Original marks: <strong>${d.marks_before}</strong> / ${currentMaxMarks}</p>
+                <div style="background:var(--bg-card); padding:12px; border-radius:var(--radius-sm); border:1px solid var(--border); margin-bottom:16px;">
+                    <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:4px; text-transform:uppercase;">Student says:</p>
+                    <p style="color:var(--text-primary); font-size:0.9rem; line-height:1.5;">"${d.description}"</p>
+                </div>
+                ${!isOpen ? `<div style="margin-bottom:16px; padding:10px; border-radius:var(--radius-sm); background:var(--bg-secondary); border-left:4px solid ${d.status === 'resolved' ? 'var(--success)' : 'var(--danger)'};">
+                    <p style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">Resolution Status:</p>
+                    <p style="font-weight:600; color:${d.status === 'resolved' ? 'var(--success)' : 'var(--danger)'};">${d.status.toUpperCase()}${d.marks_after !== null ? ` (Marks: ${d.marks_after})` : ''}</p>
+                </div>` : ''}
+            `;
+
+            document.getElementById('resolveResponse').value = d.teacher_response || '';
+            document.getElementById('resolveResponse').readOnly = !isOpen;
+
+            document.getElementById('resolveMarks').value = d.marks_after !== null ? d.marks_after : '';
+            document.getElementById('resolveMarks').readOnly = !isOpen;
+
+            document.getElementById('currentMarksLabel').textContent = d.marks_before;
+
+            // Show/Hide actions
+            document.getElementById('resolveActions').style.display = isOpen ? 'flex' : 'none';
+            document.getElementById('viewOnlyActions').style.display = isOpen ? 'none' : 'flex';
+
+            // Reset tabs
+            switchPdfTab('report');
+
+            // Load PDF Previews
+            const rFrame = document.getElementById('reportFrame');
+            const aFrame = document.getElementById('answerFrame');
+            const loader = document.getElementById('pdfLoading');
+            rFrame.src = '';
+            aFrame.src = '';
+            rFrame.style.display = 'none';
+            aFrame.style.display = 'none';
+            loader.style.display = 'flex';
+
             showModal('resolveModal');
+
+            try {
+                // Fetch Report
+                const rBlob = await Api.downloadBlob(`/api/teacher/disputes/${id}/report`);
+                const rUrl = URL.createObjectURL(rBlob);
+                rFrame.src = rUrl;
+
+                // Fetch Original Answer
+                const aBlob = await Api.downloadBlob(`/api/teacher/disputes/${id}/answer`);
+                const aUrl = URL.createObjectURL(aBlob);
+                aFrame.src = aUrl;
+
+                rFrame.style.display = 'block';
+                loader.style.display = 'none';
+
+                document.getElementById('openPdfBtn').onclick = () => window.open(rUrl, '_blank');
+            } catch (e) {
+                loader.innerHTML = `<span style="color:var(--danger)">Failed to load PDFs</span>`;
+                console.error(e);
+            }
         }
 
         async function resolveDispute(status) {
             try {
+                const response = g('resolveResponse');
+                if (!response) return toast('Please provide a response', 'error');
+
+                const marksInput = g('resolveMarks');
+                let marks_after = null;
+
+                if (status === 'resolved') {
+                    if (marksInput === '' || isNaN(marksInput)) {
+                        return toast('invalid mark', 'error');
+                    }
+                    marks_after = parseFloat(marksInput);
+                    if (marks_after > currentMaxMarks) {
+                        return toast('mark is more than alloted mark', 'error');
+                    }
+                }
+
                 const body = {
-                    teacher_response: g('resolveResponse'),
+                    teacher_response: response,
                     status,
+                    marks_after
                 };
-                const marks = g('resolveMarks');
-                if (status === 'resolved' && marks) body.marks_after = +marks;
 
                 await Api.put(`/api/teacher/disputes/${currentDisputeId}/resolve`, body);
                 hideModal('resolveModal');

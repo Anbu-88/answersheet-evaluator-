@@ -678,9 +678,66 @@ textarea:focus {
     padding: 32px;
     width: 90%;
     max-width: 500px;
-    max-height: 80vh;
+    max-height: 90vh;
     overflow-y: auto;
     animation: slideUp 0.3s ease;
+    position: relative;
+}
+
+.modal-xl {
+    max-width: 1100px;
+    width: 95%;
+}
+
+.modal-split {
+    display: flex;
+    gap: 24px;
+    align-items: stretch;
+}
+
+.modal-side-form {
+    flex: 1;
+}
+
+.modal-side-preview {
+    flex: 1.5;
+    background: #111;
+    border-radius: var(--radius);
+    overflow: hidden;
+    min-height: 500px;
+    display: flex;
+    flex-direction: column;
+}
+
+.pdf-header {
+    background: #222;
+    padding: 10px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #333;
+}
+
+.pdf-iframe {
+    width: 100%;
+    flex: 1;
+    border: none;
+}
+
+.modal-close-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.modal-close-btn:hover {
+    color: var(--text-primary);
 }
 
 .modal h3 {

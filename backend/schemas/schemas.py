@@ -130,6 +130,7 @@ class TestCreate(BaseModel):
     start_time: datetime
     end_time: datetime
     total_marks: int = 0
+    test_type: str = "subjective" # "subjective" or "mcq"
 
 class TestUpdate(BaseModel):
     title: Optional[str] = None
@@ -150,6 +151,7 @@ class TestResponse(BaseModel):
     end_time: datetime
     total_marks: int
     status: str
+    test_type: str
     answer_key_path: Optional[str] = None
     answer_key_uploaded: bool = False
     created_at: datetime
@@ -210,6 +212,8 @@ class DisputeResponse(BaseModel):
     resolved_at: Optional[datetime] = None
     student_name: Optional[str] = None
     test_title: Optional[str] = None
+    report_pdf_path: Optional[str] = None
+    question_total_marks: Optional[float] = None
 
     class Config:
         from_attributes = True

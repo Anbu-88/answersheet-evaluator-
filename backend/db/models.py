@@ -22,6 +22,11 @@ class UserRole(str, enum.Enum):
     student = "student"
 
 
+class TestType(str, enum.Enum):
+    subjective = "subjective"
+    mcq = "mcq"
+
+
 class TestStatus(str, enum.Enum):
     draft = "draft"
     active = "active"
@@ -146,6 +151,7 @@ class Test(Base):
     answer_key_path = Column(String(500), nullable=True)
     answer_key_data = Column(JSON, nullable=True)
     total_marks = Column(Integer, default=0)
+    test_type = Column(Enum(TestType), default=TestType.subjective)
     status = Column(Enum(TestStatus), default=TestStatus.draft)
     created_at = Column(DateTime, default=utcnow)
 
