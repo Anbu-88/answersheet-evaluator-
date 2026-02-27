@@ -236,10 +236,10 @@ async function gradeExam() {
 
         // Check content type — if PDF, handle as blob download
         const contentType = response.headers.get("content-type");
-        
+
         if (contentType && contentType.includes("application/pdf")) {
             reportBlob = await response.blob();
-            
+
             // We still need to show some results. Let's parse what we can 
             // from the grading. Make a secondary request for display data.
             try {

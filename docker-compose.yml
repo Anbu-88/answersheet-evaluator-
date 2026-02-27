@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: examai-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - uploads_data:/app/uploads
+      - db_data:/app/db
+    environment:
+      - DATABASE_URL=sqlite:////app/db/examai.db
+    env_file:
+      - ./backend/.env
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: examai-frontend
+    ports:
+      - "5500:80"
+    depends_on:
+      - backend
+    restart: always
+
+volumes:
+  uploads_data:
+  db_data:
+
+    # Optional: Add a PostgreSQL service if you want to move away from SQLite
+    # db:
+    #   image: postgres:15-alpine
+    #   container_name: examai-db
+    #   environment:
+    #     POSTGRES_USER: examai_user
+    #     POSTGRES_PASSWORD: examai_password
+    #     POSTGRES_DB: examai
+    #   volumes:
+    #     - postgres_data:/var/lib/postgresql/data
+    #   ports:
+    #     - "5432:5432"
+
+    # volumes:
+    #   postgres_data:

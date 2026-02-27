@@ -128,6 +128,7 @@ async def create_test(
         test_type=data.test_type,
         status=TestStatus.active,
     )
+    db.add(test)
     db.commit()
     db.refresh(test)
 
@@ -264,7 +265,7 @@ async def list_test_submissions(
 
 @router.get("/disputes", response_model=list[DisputeResponse])
 async def list_my_disputes(
-    status: str = None,
+    status: str | None = None,
     current_user: User = Depends(teacher_dep),
     db: Session = Depends(get_db),
 ):

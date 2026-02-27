@@ -1,0 +1,9 @@
+backend/__pycache__
+backend/.env
+backend/**/__pycache__
+backend/uploads/
+backend/*.db
+*.pyc
+__pycache__/
+.agent/
+.env

@@ -168,6 +168,32 @@ All settings are in `backend/config.py`:
 
 ---
 
+---
+
+## 🐳 Running with Docker
+
+You can run the entire stack using Docker and Docker Compose. This is the easiest way to get started without installing Python locally.
+
+### 1. Requirements
+- [Docker](https://docs.docker.com/get-docker/)
+- [Docker Compose](https://docs.docker.com/compose/install/)
+
+### 2. Setup
+1. Edit `backend/.env` and add your `GEMINI_API_KEY`.
+2. Run the following command in the root directory:
+
+```bash
+docker-compose up --build
+```
+
+### 3. Access
+- **Frontend:** [http://localhost:5500](http://localhost:5500)
+- **Backend API:** [http://localhost:8000](http://localhost:8000)
+- **API Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
+
+---
+
 ## 📄 License
+
 
 This project is open source and available under the [MIT License](LICENSE).
